@@ -61,7 +61,7 @@ export class ConfigService {
 
     const configs: dotenv.DotenvParseOutput[] = [];
 
-    // It will load, for example, .env.test when running script like "NODE_ENV=test ts-node main.ts"
+    // It will load, for example, .env.test when running script like "NODE_ENV=test ts-node main.ts" 
     const defaultEnvConfigPath = nodeEnv ? `.env.${nodeEnv}` : '.env';
 
     const defaultEnvConfig = dotenv.config({ path: defaultEnvConfigPath });
