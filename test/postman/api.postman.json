@@ -1,0 +1,187 @@
+{
+	"info": {
+		"_postman_id": "7cda0885-8bf8-4d3f-910e-90831c0b896d",
+		"name": "test-ncthuan",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"item": [
+		{
+			"name": "api",
+			"item": [
+				{
+					"name": "auth",
+					"item": [
+						{
+							"name": "register",
+							"event": [
+								{
+									"listen": "prerequest",
+									"script": {
+										"exec": [
+											"// Based on tutorial of running multiple test cases for APIs: https://www.youtube.com/watch?v=sZKoBQ1HpKw\r",
+											"// Note: using iteration files only allows running 1 API at a time\r",
+											"\r",
+											"/**\r",
+											" * Specify test cases\r",
+											" */\r",
+											"const cases = pm.environment.has('cases') ? JSON.parse(pm.environment.get('cases')) :\r",
+											"[\r",
+											"  {\r",
+											"    body: {\r",
+											"      \"username\": \"user1\",\r",
+											"      \"fullName\": \"name1\",\r",
+											"      \"password\": \"password\",\r",
+											"      \"email\": \"email@email.com\"\r",
+											"    },\r",
+											"    expect: {},\r",
+											"  },\r",
+											"  {\r",
+											"    body: {\r",
+											"      \"username\": \"user1\",\r",
+											"      \"fullName\": \"name2\",\r",
+											"      \"password\": \"password\",\r",
+											"      \"email\": \"email.2@email.com\"\r",
+											"    },\r",
+											"    expect: {\r",
+											"      errorCode: \"USERNAME_ALREADY_EXISTS\",\r",
+											"    },\r",
+											"  },\r",
+											"  {\r",
+											"    body: {\r",
+											"      \"username\": \"user3\",\r",
+											"      \"fullName\": \"name3\",\r",
+											"      \"password\": \"password\",\r",
+											"      \"email\": \"email@email.com\"\r",
+											"    },\r",
+											"    expect: {\r",
+											"      errorCode: \"EMAIL_EXISTED\",\r",
+											"    },\r",
+											"  },\r",
+											"];\r",
+											"\r",
+											"const thisCase = cases.shift();\r",
+											"pm.environment.set('numCases', cases.length);\r",
+											"pm.environment.set('cases', JSON.stringify(cases))\r",
+											"\r",
+											"pm.environment.set('thisCase', JSON.stringify(thisCase));\r",
+											"pm.environment.set('body', JSON.stringify(thisCase.body));\r",
+											""
+										],
+										"type": "text/javascript"
+									}
+								},
+								{
+									"listen": "test",
+									"script": {
+										"exec": [
+											"const numCases = pm.environment.get('numCases');\r",
+											"if (numCases == 0) {\r",
+											"  postman.setNextRequest(null);\r",
+											"}\r",
+											"else {\r",
+											"  postman.setNextRequest('register');\r",
+											"}\r",
+											"\r",
+											"const thisCase = JSON.parse(pm.environment.get('thisCase'));\r",
+											"const expect = thisCase.expect || {};\r",
+											"\r",
+											"/**\r",
+											" * Assertions starts here\r",
+											" */\r",
+											"if (expect.errorCode) {\r",
+											"  tests['Response status 400'] = pm.response.to.have.status(400);\r",
+											"}\r",
+											"else {\r",
+											"  tests['Successful POST request'] = pm.expect(pm.response.code).to.be.oneOf([201, 202]);\r",
+											"\r",
+											"  const resBody = JSON.parse(responseBody);\r",
+											"  tests['Response has \"authToken\" property'] = resBody.hasOwnProperty('authToken');\r",
+											"  tests['Response has \"me\" property'] = resBody.hasOwnProperty('me');\r",
+											"\r",
+											"  const me = resBody.me || {};\r",
+											"  tests['Me has \"emails\" property'] = me.hasOwnProperty('emails');\r",
+											"  tests['Me has \"username\" property'] = me.hasOwnProperty('username');\r",
+											"}\r",
+											""
+										],
+										"type": "text/javascript"
+									}
+								}
+							],
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{{body}}",
+									"options": {
+										"raw": {
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "{{baseUrl}}/api/register",
+									"host": [
+										"{{baseUrl}}"
+									],
+									"path": [
+										"api",
+										"register"
+									]
+								}
+							},
+							"response": [
+								{
+									"name": "Register new account with email and password",
+									"originalRequest": {
+										"method": "POST",
+										"header": [],
+										"body": {
+											"mode": "raw",
+											"raw": "{\n    \"username\": \"irure in\",\n    \"fullName\": \"anim commodo\",\n    \"password\": \"exercitation sit par\",\n    \"email\": \"dolor irure\"\n}"
+										},
+										"url": {
+											"raw": "{{baseUrl}}/api/register",
+											"host": [
+												"{{baseUrl}}"
+											],
+											"path": [
+												"api",
+												"register"
+											]
+										}
+									},
+									"status": "OK",
+									"code": 200,
+									"_postman_previewlanguage": "json",
+									"header": [
+										{
+											"key": "Content-Type",
+											"value": "application/json"
+										}
+									],
+									"cookie": [],
+									"body": "{\n \"authToken\": \"aute in quis qui pariatur\",\n \"userId\": \"est consectetur\",\n \"me\": {\n  \"_id\": \"in velit reprehenderit\",\n  \"name\": \"esse consequat\",\n  \"username\": \"et nisi aliquip sed\",\n  \"emails\": [\n   {\n    \"address\": \"ipsum laborum\",\n    \"verified\": true\n   },\n   {\n    \"address\": \"laboris cupidatat\",\n    \"verified\": false\n   }\n  ],\n  \"status\": \"et\",\n  \"statusConnection\": \"incididunt ea\",\n  \"roles\": [\n   \"in in ea commodo laborum\",\n   \"laborum consequat veniam\"\n  ],\n  \"avatar\": \"Duis quis in\",\n  \"active\": true,\n  \"settings\": {\n   \"enableNotification\": true,\n   \"language\": \"nostrud do exercitation dolore\",\n   \"preferences\": {}\n  }\n }\n}"
+								}
+							]
+						}
+						
+					]
+				}
+			]
+		}
+	],
+	"variable": [
+		{
+			"key": "baseUrl",
+			"value": "/",
+			"type": "string"
+		}
+	]
+}
