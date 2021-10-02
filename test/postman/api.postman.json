@@ -28,10 +28,18 @@
 											"[\r",
 											"  {\r",
 											"    body: {\r",
+											"      \"username\": \"user\",\r",
+											"      \"fullName\": \"name\",\r",
+											"      \"password\": \"password\",\r",
+											"    },\r",
+											"    expect: {},\r",
+											"  },\r",
+											"  {\r",
+											"    body: {\r",
 											"      \"username\": \"user1\",\r",
 											"      \"fullName\": \"name1\",\r",
 											"      \"password\": \"password\",\r",
-											"      \"email\": \"email@email.com\"\r",
+											"      \"email\": \"email.1@email.com\",\r",
 											"    },\r",
 											"    expect: {},\r",
 											"  },\r",
@@ -40,7 +48,7 @@
 											"      \"username\": \"user1\",\r",
 											"      \"fullName\": \"name2\",\r",
 											"      \"password\": \"password\",\r",
-											"      \"email\": \"email.2@email.com\"\r",
+											"      \"email\": \"email.2@email.com\",\r",
 											"    },\r",
 											"    expect: {\r",
 											"      errorCode: \"USERNAME_ALREADY_EXISTS\",\r",
@@ -51,11 +59,29 @@
 											"      \"username\": \"user3\",\r",
 											"      \"fullName\": \"name3\",\r",
 											"      \"password\": \"password\",\r",
-											"      \"email\": \"email@email.com\"\r",
+											"      \"email\": \"email.1@email.com\",\r",
 											"    },\r",
 											"    expect: {\r",
 											"      errorCode: \"EMAIL_EXISTED\",\r",
 											"    },\r",
+											"  },\r",
+											"  {\r",
+											"    body: {\r",
+											"      \"username\": \"user2\",\r",
+											"      \"fullName\": \"Nguyễn Công Thuận\",\r",
+											"      \"password\": \"password\",\r",
+											"      \"email\": \"email.2@email.com\",\r",
+											"    },\r",
+											"    expect: {},\r",
+											"  },\r",
+											"  {\r",
+											"    body: {\r",
+											"      \"username\": \"user3\",\r",
+											"      \"fullName\": \"Nguyễn Công Dương\",\r",
+											"      \"password\": \"password\",\r",
+											"      \"email\": \"email.3@email.com\",\r",
+											"    },\r",
+											"    expect: {},\r",
 											"  },\r",
 											"];\r",
 											"\r",
@@ -75,32 +101,37 @@
 									"script": {
 										"exec": [
 											"const numCases = pm.environment.get('numCases');\r",
-											"if (numCases == 0) {\r",
-											"  postman.setNextRequest(null);\r",
-											"}\r",
-											"else {\r",
+											"if (numCases > 0) {\r",
 											"  postman.setNextRequest('register');\r",
 											"}\r",
-											"\r",
+											"else {\r",
+											"  pm.environment.unset('numCases');\r",
+											"  pm.environment.unset('cases');\r",
+											"  postman.setNextRequest('login');\r",
+											"}\r",
 											"const thisCase = JSON.parse(pm.environment.get('thisCase'));\r",
 											"const expect = thisCase.expect || {};\r",
 											"\r",
 											"/**\r",
 											" * Assertions starts here\r",
 											" */\r",
+											"const resBody = JSON.parse(responseBody);\r",
 											"if (expect.errorCode) {\r",
 											"  tests['Response status 400'] = pm.response.to.have.status(400);\r",
+											"  tests['error code'] = pm.expect(resBody.code).to.eql(expect.errorCode);\r",
 											"}\r",
 											"else {\r",
-											"  tests['Successful POST request'] = pm.expect(pm.response.code).to.be.oneOf([201, 202]);\r",
-											"\r",
-											"  const resBody = JSON.parse(responseBody);\r",
+											"  tests['Successful POST request'] = pm.response.to.be.success;\r",
 											"  tests['Response has \"authToken\" property'] = resBody.hasOwnProperty('authToken');\r",
 											"  tests['Response has \"me\" property'] = resBody.hasOwnProperty('me');\r",
 											"\r",
 											"  const me = resBody.me || {};\r",
-											"  tests['Me has \"emails\" property'] = me.hasOwnProperty('emails');\r",
 											"  tests['Me has \"username\" property'] = me.hasOwnProperty('username');\r",
+											"\r",
+											"  // save user\r",
+											"  const users = JSON.parse(pm.environment.get('users'));\r",
+											"  users.push(resBody);\r",
+											"  pm.environment.set('users', JSON.stringify(users));\r",
 											"}\r",
 											""
 										],
@@ -136,24 +167,1420 @@
 									]
 								}
 							},
+							"response": []
+						},
+						{
+							"name": "login",
+							"event": [
+								{
+									"listen": "test",
+									"script": {
+										"exec": [
+											"const resBody = JSON.parse(responseBody);\r",
+											"tests['Successful POST request'] = pm.response.to.be.success;\r",
+											"tests['Response has \"authToken\" property'] = resBody.hasOwnProperty('authToken');\r",
+											"tests['Response has \"refreshToken\" property'] = resBody.hasOwnProperty('refreshToken');\r",
+											"tests['Response has \"me\" property'] = resBody.hasOwnProperty('me');\r",
+											"\r",
+											"pm.environment.set('authToken', resBody.authToken);\r",
+											"pm.environment.set('refreshToken', resBody.refreshToken);\r",
+											"\r",
+											"postman.setNextRequest('users/profile');"
+										],
+										"type": "text/javascript"
+									}
+								}
+							],
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n    \"username\": \"user\",\n    \"password\": \"password\"\n}"
+								},
+								"url": {
+									"raw": "{{baseUrl}}/api/login",
+									"host": [
+										"{{baseUrl}}"
+									],
+									"path": [
+										"api",
+										"login"
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "refresh",
+							"event": [
+								{
+									"listen": "test",
+									"script": {
+										"exec": [
+											"const resBody = JSON.parse(responseBody);\r",
+											"tests['Successful POST request'] = pm.response.to.be.success;\r",
+											"tests['Response has \"authToken\" property'] = resBody.hasOwnProperty('authToken');\r",
+											"tests['Response has \"refreshToken\" property'] = resBody.hasOwnProperty('refreshToken');\r",
+											"\r",
+											"pm.environment.set('testAuthTokenLogout', resBody.authToken);\r",
+											"\r",
+											"postman.setNextRequest('logout');"
+										],
+										"type": "text/javascript"
+									}
+								},
+								{
+									"listen": "prerequest",
+									"script": {
+										"exec": [
+											"const users = JSON.parse(pm.environment.get('users'));\r",
+											"pm.environment.set(\"testRefreshToken\", users[0].refreshToken);"
+										],
+										"type": "text/javascript"
+									}
+								}
+							],
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"token\": \"{{testRefreshToken}}\"\n}"
+								},
+								"url": {
+									"raw": "{{baseUrl}}/api/refresh",
+									"host": [
+										"{{baseUrl}}"
+									],
+									"path": [
+										"api",
+										"refresh"
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "logout",
+							"event": [
+								{
+									"listen": "test",
+									"script": {
+										"exec": [
+											"tests['Successful POST request'] = pm.response.to.be.success;\r",
+											"\r",
+											"const req = {\r",
+											"  method: 'POST',\r",
+											"  url: `${pm.environment.get('baseUrl')}/api/users/profile`,\r",
+											"  header: { 'Authorization': `Bearer ${pm.environment.get('testAuthTokenLogout')}` }\r",
+											"};\r",
+											"pm.sendRequest(req, (err, response) => {\r",
+											"  tests['Logout should blacklist the jwt'] = pm.expect(response).to.have.property('code', 401);\r",
+											"});\r",
+											"\r",
+											"postman.setNextRequest(null);"
+										],
+										"type": "text/javascript"
+									}
+								}
+							],
+							"request": {
+								"auth": {
+									"type": "bearer",
+									"bearer": [
+										{
+											"key": "token",
+											"value": "{{testAuthTokenLogout}}",
+											"type": "string"
+										}
+									]
+								},
+								"method": "POST",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": ""
+								},
+								"url": {
+									"raw": "{{baseUrl}}/api/logout",
+									"host": [
+										"{{baseUrl}}"
+									],
+									"path": [
+										"api",
+										"logout"
+									]
+								}
+							},
+							"response": []
+						}
+					],
+					"event": [
+						{
+							"listen": "prerequest",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									""
+								]
+							}
+						},
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									""
+								]
+							}
+						}
+					]
+				},
+				{
+					"name": "users",
+					"item": [
+						{
+							"name": "users/profile",
+							"event": [
+								{
+									"listen": "test",
+									"script": {
+										"exec": [
+											"tests['Successful POST request'] = pm.response.to.be.success;\r",
+											"const resBody = JSON.parse(responseBody);\r",
+											"tests['Response has \"name\" property'] = resBody.hasOwnProperty('name');\r",
+											"\r",
+											"postman.setNextRequest('users/update');"
+										],
+										"type": "text/javascript"
+									}
+								}
+							],
+							"request": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{baseUrl}}/api/users/profile",
+									"host": [
+										"{{baseUrl}}"
+									],
+									"path": [
+										"api",
+										"users",
+										"profile"
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "users/update",
+							"event": [
+								{
+									"listen": "prerequest",
+									"script": {
+										"exec": [
+											"// \"fullName\": \"dolore velit ut\",\r",
+											"// \"uploadToken\": \"sed in est laboris in\",\r",
+											"// \"status\": \"sed in est laboris in\",\r",
+											"const users = JSON.parse(pm.environment.get('users'));\r",
+											"\r",
+											"let thisCase = undefined;\r",
+											"const caseId = parseInt(pm.environment.get('caseId'));\r",
+											"\r",
+											"switch(caseId) {\r",
+											"case 0:\r",
+											"  pm.environment.set('authToken', users[1].authToken);\r",
+											"  thisCase = {\r",
+											"    body: {\r",
+											"      \"fullName\": \"dolore velit ut\",\r",
+											"      \"status\": \"ONLINE\",\r",
+											"    },\r",
+											"    expect: {},\r",
+											"  }\r",
+											"  break;\r",
+											"// case 1:\r",
+											"//   thisCase = {\r",
+											"//     body: {\r",
+											"      \r",
+											"//     },\r",
+											"//     expect: {},\r",
+											"//   }\r",
+											"//   break;\r",
+											"\r",
+											"default: // end\r",
+											"  pm.environment.set('authToken', users[0].authToken);\r",
+											"  thisCase = {\r",
+											"    body: {},\r",
+											"    expect: {},\r",
+											"    end: true,\r",
+											"  }\r",
+											"}\r",
+											"\r",
+											"pm.environment.set('thisCase', JSON.stringify(thisCase));\r",
+											"pm.environment.set('body', JSON.stringify(thisCase.body));\r",
+											""
+										],
+										"type": "text/javascript"
+									}
+								},
+								{
+									"listen": "test",
+									"script": {
+										"exec": [
+											"const thisCase = JSON.parse(pm.environment.get('thisCase'));\r",
+											"const caseId = parseInt(pm.environment.get('caseId'));\r",
+											"const users = JSON.parse(pm.environment.get('users'));\r",
+											"\r",
+											"const resBody = JSON.parse(responseBody);\r",
+											"if (thisCase.expect.errorCode) {\r",
+											"  tests['Response status 400'] = pm.response.to.have.status(400);\r",
+											"  tests[`error code: ${thisCase.expect.errorCode}`] = pm.expect(resBody.code).to.eql(thisCase.expect.errorCode);\r",
+											"}\r",
+											"else {\r",
+											"  tests['Successful POST request'] = pm.response.to.be.success;\r",
+											"\r",
+											"}\r",
+											"\r",
+											"switch (caseId) {\r",
+											"case 0:\r",
+											"  tests['updated fullName'] = pm.expect(resBody.name).to.eql(thisCase.body.fullName);\r",
+											"  tests['updated status'] = pm.expect(resBody.status).to.eql(thisCase.body.status);\r",
+											"  // save user\r",
+											"  users[1].me = resBody;\r",
+											"  pm.environment.set('users', JSON.stringify(users));\r",
+											"  break;\r",
+											"\r",
+											"default:\r",
+											"  tests['user remained unchanged'] = pm.expect(resBody).to.eql(users[0].me);\r",
+											"}\r",
+											"\r",
+											"if (!thisCase.end) {\r",
+											"  pm.environment.set('caseId', caseId+1)\r",
+											"  postman.setNextRequest('users/update');\r",
+											"}\r",
+											"else {\r",
+											"  pm.environment.set('caseId', 0);\r",
+											"  postman.setNextRequest('rooms/create');\r",
+											"}"
+										],
+										"type": "text/javascript"
+									}
+								}
+							],
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{{body}}"
+								},
+								"url": {
+									"raw": "{{baseUrl}}/api/users/profile",
+									"host": [
+										"{{baseUrl}}"
+									],
+									"path": [
+										"api",
+										"users",
+										"profile"
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "upload",
+							"request": {
+								"auth": {
+									"type": "bearer",
+									"bearer": [
+										{
+											"key": "token",
+											"value": "<Bearer Token>",
+											"type": "string"
+										}
+									]
+								},
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{baseUrl}}/api/users/upload-link?fileName=et exercitation Ut fugiat",
+									"host": [
+										"{{baseUrl}}"
+									],
+									"path": [
+										"api",
+										"users",
+										"upload-link"
+									],
+									"query": [
+										{
+											"key": "fileName",
+											"value": "et exercitation Ut fugiat",
+											"description": "(Required) "
+										}
+									]
+								}
+							},
+							"response": []
+						}
+					],
+					"auth": {
+						"type": "bearer",
+						"bearer": [
+							{
+								"key": "token",
+								"value": "{{authToken}}",
+								"type": "string"
+							}
+						]
+					},
+					"event": [
+						{
+							"listen": "prerequest",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									""
+								]
+							}
+						},
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									""
+								]
+							}
+						}
+					]
+				},
+				{
+					"name": "rooms",
+					"item": [
+						{
+							"name": "rooms/create",
+							"event": [
+								{
+									"listen": "prerequest",
+									"script": {
+										"exec": [
+											"/**\r",
+											" * body: body to be sent of a request\r",
+											" * expect: expectation of the response\r",
+											" * env: variable to be saved to the env at the end of the request\r",
+											" */\r",
+											"\r",
+											"const users = JSON.parse(pm.environment.get('users'));\r",
+											"const user  = users[0].me;\r",
+											"const user1 = users[1].me;\r",
+											"const user2 = users[2].me;\r",
+											"\r",
+											"let thisCase = undefined;\r",
+											"const caseId = parseInt(pm.environment.get('caseId'));\r",
+											"\r",
+											"switch(caseId) {\r",
+											"case 0:\r",
+											"  thisCase = {\r",
+											"    body: {\r",
+											"      \"type\": \"direct\",\r",
+											"      \"userIds\": [ \"614102d48b114945e491a9d0\" ],\r",
+											"    },\r",
+											"    expect: {\r",
+											"      errorCode: \"USER_NOT_FOUND\",\r",
+											"    },\r",
+											"  }\r",
+											"  break;\r",
+											"case 1:\r",
+											"  thisCase = {\r",
+											"    body: {\r",
+											"      \"type\": \"direct\",\r",
+											"      \"userIds\": [ user1._id ],\r",
+											"    },\r",
+											"    expect: {},\r",
+											"    env: { case_1_roomId: \"_id\" }\r",
+											"  }\r",
+											"  break;\r",
+											"case 2:\r",
+											"  thisCase = {\r",
+											"    body: {\r",
+											"      \"type\": \"direct\",\r",
+											"      \"userIds\": [ user1._id ],\r",
+											"    },\r",
+											"    expect: {},\r",
+											"  }\r",
+											"  break;\r",
+											"case 3:\r",
+											"  thisCase = {\r",
+											"    body: {\r",
+											"      \"type\": \"group\",\r",
+											"      \"userIds\": [ user1._id, user2._id, user2._id, user2._id ],\r",
+											"      \"name\": \"nhà rông savvycom\",\r",
+											"    },\r",
+											"    expect: {\r",
+											"      createdBy: user._id,\r",
+											"    },\r",
+											"  }\r",
+											"  break;\r",
+											"\r",
+											"default: // end\r",
+											"  thisCase = {\r",
+											"    body: {\r",
+											"      \"type\": \"group\",\r",
+											"      \"userIds\": [ user1._id, user2._id ],\r",
+											"      \"name\": \"nhà văn hóa\",\r",
+											"    },\r",
+											"    expect: {},\r",
+											"    end: true,\r",
+											"  }\r",
+											"}\r",
+											"\r",
+											"pm.environment.set('thisCase', JSON.stringify(thisCase));\r",
+											"pm.environment.set('body', JSON.stringify(thisCase.body));\r",
+											""
+										],
+										"type": "text/javascript"
+									}
+								},
+								{
+									"listen": "test",
+									"script": {
+										"exec": [
+											"const thisCase = JSON.parse(pm.environment.get('thisCase'));\r",
+											"const caseId = parseInt(pm.environment.get('caseId'));\r",
+											"\r",
+											"/**\r",
+											" * Assertions starts here\r",
+											" */\r",
+											"const resBody = JSON.parse(responseBody);\r",
+											"if (thisCase.expect.errorCode) {\r",
+											"  tests['Response status 400'] = pm.response.to.have.status(400);\r",
+											"  tests[`error code: ${thisCase.expect.errorCode}`] = pm.expect(resBody.code).to.eql(thisCase.expect.errorCode);\r",
+											"}\r",
+											"else {\r",
+											"  tests['Successful POST request'] = pm.response.to.be.success;\r",
+											"  tests['Response has \"type\" property'] = resBody.hasOwnProperty('type');\r",
+											"  if (resBody.type == 'direct') {\r",
+											"    tests['Response has \"status\" property'] = resBody.hasOwnProperty('status');\r",
+											"    tests['Response has \"isRead\" property'] = resBody.hasOwnProperty('isRead');\r",
+											"  }\r",
+											"\r",
+											"  // save room\r",
+											"  const rooms = JSON.parse(pm.environment.get('rooms'));\r",
+											"  rooms.push(resBody);\r",
+											"  pm.environment.set('rooms', JSON.stringify(rooms));\r",
+											"}\r",
+											"\r",
+											"switch (caseId) {\r",
+											"case 0: break;\r",
+											"case 1:\r",
+											"  pm.environment.set('case_1_roomId', resBody._id);\r",
+											"  break;\r",
+											"case 2:\r",
+											"  const case_1_roomId = pm.environment.get('case_1_roomId', resBody._id);\r",
+											"  tests['It should return existed direct room'] = pm.expect(resBody._id).to.eql(case_1_roomId);\r",
+											"  break;\r",
+											"case 3:\r",
+											"  tests['createdBy'] = pm.expect(resBody.createdBy).to.eql(thisCase.expect.createdBy);\r",
+											"  tests['It should validate duplicated users'] = pm.expect(resBody.users.length).to.eql(3);\r",
+											"  break;\r",
+											"default:\r",
+											"}\r",
+											"\r",
+											"if (!thisCase.end) {\r",
+											"  pm.environment.set('caseId', caseId+1)\r",
+											"  postman.setNextRequest('rooms/create');  \r",
+											"}\r",
+											"else {\r",
+											"  pm.environment.set('caseId', 0);\r",
+											"  postman.setNextRequest('rooms/list');\r",
+											"}"
+										],
+										"type": "text/javascript"
+									}
+								}
+							],
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{{body}}"
+								},
+								"url": {
+									"raw": "{{baseUrl}}/api/rooms",
+									"host": [
+										"{{baseUrl}}"
+									],
+									"path": [
+										"api",
+										"rooms"
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "rooms/list",
+							"event": [
+								{
+									"listen": "test",
+									"script": {
+										"exec": [
+											"const thisCase = JSON.parse(pm.environment.get('thisCase'));\r",
+											"const caseId = parseInt(pm.environment.get('caseId'));\r",
+											"\r",
+											"/**\r",
+											" * Assertions starts here\r",
+											" */\r",
+											"const resBody = JSON.parse(responseBody);\r",
+											"if (thisCase.expect.errorCode) {\r",
+											"  tests['Response status 400'] = pm.response.to.have.status(400);\r",
+											"  tests[`error code: ${thisCase.expect.errorCode}`] = pm.expect(resBody.code).to.eql(thisCase.expect.errorCode);\r",
+											"}\r",
+											"else {\r",
+											"  tests['Successful request'] = pm.response.to.be.success;\r",
+											"  // tests['Response has \"type\" property'] = resBody.hasOwnProperty('type');\r",
+											"  if (resBody.type == 'direct') {\r",
+											"    // tests['Response has \"status\" property'] = resBody.hasOwnProperty('status');\r",
+											"    // tests['Response has \"isRead\" property'] = resBody.hasOwnProperty('isRead');\r",
+											"  }\r",
+											"  \r",
+											"\r",
+											"}\r",
+											"\r",
+											"switch (caseId) {\r",
+											"case 0:\r",
+											"  tests['Response has \"token\" property'] = resBody.hasOwnProperty('token');\r",
+											"  pm.environment.set('pagingToken', resBody.token);\r",
+											"  break;\r",
+											"case 1:\r",
+											"  tests['Response time is less than 200ms'] = pm.expect(pm.response.responseTime).to.be.below(200);\r",
+											"  tests['Search'] = pm.expect(resBody.items.length).to.eql(1);\r",
+											"  tests['Search'] = pm.expect(resBody.items[0].name).to.include(thisCase.body.search);\r",
+											"  break;\r",
+											"default:\r",
+											"}\r",
+											"\r",
+											"if (!thisCase.end) {\r",
+											"  pm.environment.set('caseId', caseId+1)\r",
+											"  postman.setNextRequest('rooms/list');  \r",
+											"}\r",
+											"else {\r",
+											"  pm.environment.set('caseId', 0);\r",
+											"  postman.setNextRequest('rooms/detail');\r",
+											"}"
+										],
+										"type": "text/javascript"
+									}
+								},
+								{
+									"listen": "prerequest",
+									"script": {
+										"exec": [
+											"// const rooms = JSON.parse(pm.environment.get('rooms'));\r",
+											"\r",
+											"let thisCase = undefined;\r",
+											"const caseId = parseInt(pm.environment.get('caseId'));\r",
+											"\r",
+											"switch(caseId) {\r",
+											"case 0:\r",
+											"  thisCase = {\r",
+											"    body: {\r",
+											"      \"limit\": 1,\r",
+											"    },\r",
+											"    expect: {},\r",
+											"  }\r",
+											"  break;\r",
+											"case 1:\r",
+											"  thisCase = {\r",
+											"    body: {\r",
+											"      // pagingToken,\r",
+											"      \"search\": \"savvycom\",\r",
+											"    },\r",
+											"    expect: {},\r",
+											"  }\r",
+											"  break;\r",
+											"\r",
+											"default: // end\r",
+											"  thisCase = {\r",
+											"    body: {},\r",
+											"    expect: {},\r",
+											"    end: true,\r",
+											"  }\r",
+											"}\r",
+											"\r",
+											"pm.environment.set('thisCase', JSON.stringify(thisCase));\r",
+											"pm.environment.set('queries', Object.keys(thisCase.body).map(key => `${key}=${thisCase.body[key]}`).join('&'));\r",
+											""
+										],
+										"type": "text/javascript"
+									}
+								}
+							],
+							"request": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{baseUrl}}/api/rooms?order=latest&{{queries}}",
+									"host": [
+										"{{baseUrl}}"
+									],
+									"path": [
+										"api",
+										"rooms"
+									],
+									"query": [
+										{
+											"key": "order",
+											"value": "latest",
+											"description": "`latestLastMessage` (default) - sorts by the time of the last message in a descending order.<br/>\n    `chronological` - sorts by the time of channel creation in a descending order"
+										},
+										{
+											"key": "{{queries}}",
+											"value": null
+										}
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "rooms/detail",
+							"event": [
+								{
+									"listen": "prerequest",
+									"script": {
+										"exec": [
+											"const rooms = JSON.parse(pm.environment.get('rooms'));\r",
+											"pm.environment.set(\"roomId\", rooms[0]._id);"
+										],
+										"type": "text/javascript"
+									}
+								},
+								{
+									"listen": "test",
+									"script": {
+										"exec": [
+											"const resBody = JSON.parse(responseBody);\r",
+											"tests['Successful request'] = pm.response.to.be.success;\r",
+											"\r",
+											"tests['Response has \"users\" property'] = resBody.hasOwnProperty('users');\r",
+											"if (resBody.type == 'direct') {  \r",
+											"  tests['direct room can only have 2 users'] = pm.expect(resBody.users.length).to.eql(2);\r",
+											"}\r",
+											"\r",
+											"postman.setNextRequest('rooms/mute');"
+										],
+										"type": "text/javascript"
+									}
+								}
+							],
+							"request": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{baseUrl}}/api/rooms/:id",
+									"host": [
+										"{{baseUrl}}"
+									],
+									"path": [
+										"api",
+										"rooms",
+										":id"
+									],
+									"variable": [
+										{
+											"key": "id",
+											"value": "{{roomId}}",
+											"description": "(Required) "
+										}
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "rooms/update",
+							"request": {
+								"method": "PUT",
+								"header": [],
+								"url": {
+									"raw": "{{baseUrl}}/api/rooms/:id",
+									"host": [
+										"{{baseUrl}}"
+									],
+									"path": [
+										"api",
+										"rooms",
+										":id"
+									],
+									"variable": [
+										{
+											"key": "id",
+											"value": null
+										}
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "rooms/mute",
+							"event": [
+								{
+									"listen": "prerequest",
+									"script": {
+										"exec": [
+											"const rooms = JSON.parse(pm.environment.get('rooms'));\r",
+											"\r",
+											"let thisCase = undefined;\r",
+											"const caseId = parseInt(pm.environment.get('caseId'));\r",
+											"\r",
+											"switch(caseId) {\r",
+											"case 0:\r",
+											"  thisCase = {\r",
+											"    muteRoomId: rooms[0]._id,\r",
+											"    body: { mute: true },\r",
+											"    expect: {},\r",
+											"  }\r",
+											"  break;\r",
+											"\r",
+											"default: // end\r",
+											"  thisCase = {\r",
+											"    muteRoomId: rooms[0]._id,\r",
+											"    body: { mute: false },\r",
+											"    expect: {},\r",
+											"    end: true,\r",
+											"  }\r",
+											"}\r",
+											"\r",
+											"pm.environment.set('thisCase', JSON.stringify(thisCase));\r",
+											"pm.environment.set('body', JSON.stringify(thisCase.body));\r",
+											"pm.environment.set('muteRoomId', thisCase.muteRoomId);"
+										],
+										"type": "text/javascript"
+									}
+								},
+								{
+									"listen": "test",
+									"script": {
+										"exec": [
+											"const thisCase = JSON.parse(pm.environment.get('thisCase'));\r",
+											"const caseId = parseInt(pm.environment.get('caseId'));\r",
+											"\r",
+											"/**\r",
+											" * Assertions starts here\r",
+											" */\r",
+											"if (thisCase.expect.errorCode) {\r",
+											"  const resBody = JSON.parse(responseBody);\r",
+											"  tests['Response status 400'] = pm.response.to.have.status(400);\r",
+											"  tests[`error code: ${thisCase.expect.errorCode}`] = pm.expect(resBody.code).to.eql(thisCase.expect.errorCode);\r",
+											"}\r",
+											"else {\r",
+											"  tests['Success request'] = pm.response.to.be.success;\r",
+											"  // tests['Response has \"status\" property'] = resBody.hasOwnProperty('status');\r",
+											"  \r",
+											"}\r",
+											"\r",
+											"switch (caseId) {\r",
+											"case 0:\r",
+											"  pm.sendRequest({\r",
+											"    method: 'GET',\r",
+											"    url: `${pm.environment.get('baseUrl')}/api/rooms/${thisCase.muteRoomId}`,\r",
+											"    header: { 'Authorization': `Bearer ${pm.environment.get('authToken')}` }\r",
+											"  },\r",
+											"  (err, response) => {\r",
+											"    tests[\"muted\"] = pm.expect(response.json().isMuted).to.eql(true);\r",
+											"  });\r",
+											"  break;\r",
+											"\r",
+											"default:\r",
+											"  pm.sendRequest({\r",
+											"    method: 'GET',\r",
+											"    url: `${pm.environment.get('baseUrl')}/api/rooms/${thisCase.muteRoomId}`,\r",
+											"    header: { 'Authorization': `Bearer ${pm.environment.get('authToken')}` }\r",
+											"  },\r",
+											"  (err, response) => {\r",
+											"    tests[\"unmuted\"] = pm.expect(response.json().isMuted).to.eql(false);\r",
+											"  });\r",
+											"}\r",
+											"\r",
+											"if (!thisCase.end) {\r",
+											"  pm.environment.set('caseId', caseId+1)\r",
+											"  postman.setNextRequest('rooms/mute');\r",
+											"}\r",
+											"else {\r",
+											"  pm.environment.set('caseId', 0);\r",
+											"  postman.setNextRequest('rooms/block');\r",
+											"}"
+										],
+										"type": "text/javascript"
+									}
+								}
+							],
+							"request": {
+								"method": "POST",
+								"header": [],
+								"body": {
+									"mode": "raw",
+									"raw": "{{body}}",
+									"options": {
+										"raw": {
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "{{baseUrl}}/api/rooms/:id/mute",
+									"host": [
+										"{{baseUrl}}"
+									],
+									"path": [
+										"api",
+										"rooms",
+										":id",
+										"mute"
+									],
+									"variable": [
+										{
+											"key": "id",
+											"value": "{{muteRoomId}}",
+											"description": "(Required) "
+										}
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "rooms/block",
+							"event": [
+								{
+									"listen": "prerequest",
+									"script": {
+										"exec": [
+											"const rooms = JSON.parse(pm.environment.get('rooms'));\r",
+											"const users = JSON.parse(pm.environment.get('users'));\r",
+											"\r",
+											"let thisCase = undefined;\r",
+											"const caseId = parseInt(pm.environment.get('caseId'));\r",
+											"\r",
+											"switch(caseId) {\r",
+											"case 0:\r",
+											"  thisCase = {\r",
+											"    blockRoomId: rooms[0]._id,\r",
+											"    body: {\r",
+											"      userId: users[1].me._id,\r",
+											"      block: true,\r",
+											"    },\r",
+											"    expect: {},\r",
+											"  }\r",
+											"  break;\r",
+											"case 1:\r",
+											"  thisCase = {\r",
+											"    blockRoomId: rooms[0]._id,\r",
+											"    body: {\r",
+											"      userId: users[1].me._id,\r",
+											"      block: false,\r",
+											"    },\r",
+											"    expect: {},\r",
+											"  }\r",
+											"  break;\r",
+											"case 2:\r",
+											"  thisCase = {\r",
+											"    blockRoomId: rooms[0]._id,\r",
+											"    body: {\r",
+											"      userId: users[0].me._id,\r",
+											"      block: false,\r",
+											"    },\r",
+											"    expect: {\r",
+											"      errorCode: 'CANNOT_SELF_BLOCK',\r",
+											"    },\r",
+											"  }\r",
+											"  break;\r",
+											"\r",
+											"default: // end\r",
+											"  thisCase = {\r",
+											"    blockRoomId: rooms[0]._id,\r",
+											"    body: {\r",
+											"      userId: '123456',\r",
+											"      block: false,\r",
+											"    },\r",
+											"    expect: {\r",
+											"      errorCode: 'USER_NOT_FOUND',\r",
+											"    },\r",
+											"    end: true,\r",
+											"  }\r",
+											"}\r",
+											"\r",
+											"pm.environment.set('thisCase', JSON.stringify(thisCase));\r",
+											"pm.environment.set('body', JSON.stringify(thisCase.body));\r",
+											"pm.environment.set('blockRoomId', thisCase.blockRoomId);\r",
+											""
+										],
+										"type": "text/javascript"
+									}
+								},
+								{
+									"listen": "test",
+									"script": {
+										"exec": [
+											"const thisCase = JSON.parse(pm.environment.get('thisCase'));\r",
+											"const caseId = parseInt(pm.environment.get('caseId'));\r",
+											"\r",
+											"/**\r",
+											" * Assertions starts here\r",
+											" */\r",
+											"if (thisCase.expect.errorCode) {\r",
+											"  const resBody = JSON.parse(responseBody);\r",
+											"  tests['Response status 400'] = pm.response.to.have.status(400);\r",
+											"  tests[`error code: ${thisCase.expect.errorCode}`] = pm.expect(resBody.code).to.eql(thisCase.expect.errorCode);\r",
+											"}\r",
+											"else {\r",
+											"  tests['Success request'] = pm.response.to.be.success;\r",
+											"  // tests['Response has \"status\" property'] = resBody.hasOwnProperty('status');\r",
+											"  \r",
+											"}\r",
+											"\r",
+											"switch (caseId) {\r",
+											"case 0:\r",
+											"  pm.sendRequest({\r",
+											"    method: 'GET',\r",
+											"    url: `${pm.environment.get('baseUrl')}/api/rooms/${thisCase.blockRoomId}`,\r",
+											"    header: { 'Authorization': `Bearer ${pm.environment.get('authToken')}` }\r",
+											"  },\r",
+											"  (err, response) => {\r",
+											"    tests[\"blocked\"] = pm.expect(response.json().blockList).to.eql([thisCase.body.userId]);\r",
+											"  });\r",
+											"  break;\r",
+											"case 1:\r",
+											"  pm.sendRequest({\r",
+											"    method: 'GET',\r",
+											"    url: `${pm.environment.get('baseUrl')}/api/rooms/${thisCase.blockRoomId}`,\r",
+											"    header: { 'Authorization': `Bearer ${pm.environment.get('authToken')}` }\r",
+											"  },\r",
+											"  (err, response) => {\r",
+											"    tests[\"unblocked\"] = pm.expect(response.json().blockList).to.eql([]);\r",
+											"  });\r",
+											"case 2:\r",
+											"  break;\r",
+											"default:\r",
+											"}\r",
+											"\r",
+											"if (!thisCase.end) {\r",
+											"  pm.environment.set('caseId', caseId+1)\r",
+											"  postman.setNextRequest('rooms/block');  \r",
+											"}\r",
+											"else {\r",
+											"  pm.environment.set('caseId', 0);\r",
+											"  postman.setNextRequest('rooms/delete');\r",
+											"}"
+										],
+										"type": "text/javascript"
+									}
+								}
+							],
+							"request": {
+								"method": "POST",
+								"header": [],
+								"body": {
+									"mode": "raw",
+									"raw": "{{body}}",
+									"options": {
+										"raw": {
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "{{baseUrl}}/api/rooms/:id/block",
+									"host": [
+										"{{baseUrl}}"
+									],
+									"path": [
+										"api",
+										"rooms",
+										":id",
+										"block"
+									],
+									"variable": [
+										{
+											"key": "id",
+											"value": "{{blockRoomId}}",
+											"description": "(Required) "
+										}
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "rooms/delete",
+							"event": [
+								{
+									"listen": "prerequest",
+									"script": {
+										"exec": [
+											"const rooms = JSON.parse(pm.environment.get('rooms'));\r",
+											"\r",
+											"let thisCase = undefined;\r",
+											"const caseId = parseInt(pm.environment.get('caseId'));\r",
+											"\r",
+											"switch(caseId) {\r",
+											"case 0:\r",
+											"  thisCase = {\r",
+											"    deleteRoomId: rooms[0]._id,\r",
+											"    expect: {},\r",
+											"  }\r",
+											"  break;\r",
+											"// case 1:\r",
+											"//   thisCase = {\r",
+											"//     expect: {},\r",
+											"//   }\r",
+											"//   break;\r",
+											"\r",
+											"default: // end\r",
+											"  thisCase = {\r",
+											"    deleteRoomId: \"614102d48b114945e491a9d0\",\r",
+											"    expect: {\r",
+											"      errorCode: \"ROOM_NOT_FOUND\",\r",
+											"    },\r",
+											"    end: true,\r",
+											"  }\r",
+											"}\r",
+											"\r",
+											"pm.environment.set('thisCase', JSON.stringify(thisCase));\r",
+											"pm.environment.set('body', JSON.stringify(thisCase.body));\r",
+											"pm.environment.set('deleteRoomId', thisCase.deleteRoomId);"
+										],
+										"type": "text/javascript"
+									}
+								},
+								{
+									"listen": "test",
+									"script": {
+										"exec": [
+											"const thisCase = JSON.parse(pm.environment.get('thisCase'));\r",
+											"const caseId = parseInt(pm.environment.get('caseId'));\r",
+											"\r",
+											"/**\r",
+											" * Assertions starts here\r",
+											" */\r",
+											"if (thisCase.expect.errorCode) {\r",
+											"  const resBody = JSON.parse(responseBody);\r",
+											"  tests['Response status 400'] = pm.response.to.have.status(400);\r",
+											"  tests[`error code: ${thisCase.expect.errorCode}`] = pm.expect(resBody.code).to.eql(thisCase.expect.errorCode);\r",
+											"}\r",
+											"else {\r",
+											"  tests['Success request'] = pm.response.to.be.success;\r",
+											"  // tests['Response has \"status\" property'] = resBody.hasOwnProperty('status');\r",
+											"  \r",
+											"}\r",
+											"\r",
+											"switch (caseId) {\r",
+											"case 0:\r",
+											"  pm.sendRequest({\r",
+											"    method: 'GET',\r",
+											"    url: `${pm.environment.get('baseUrl')}/api/rooms`,\r",
+											"    header: { 'Authorization': `Bearer ${pm.environment.get('authToken')}` }\r",
+											"  },\r",
+											"  (err, response) => {\r",
+											"    tests[\"Room disappear from list\"] = pm.expect(response.json().items.map(i=>i._id)).to.not.include(thisCase.deleteRoomId);\r",
+											"  });\r",
+											"  break;\r",
+											"\r",
+											"default:\r",
+											"}\r",
+											"\r",
+											"if (!thisCase.end) {\r",
+											"  pm.environment.set('caseId', caseId+1)\r",
+											"  postman.setNextRequest('rooms/delete');  \r",
+											"}\r",
+											"else {\r",
+											"  pm.environment.set('caseId', 0);\r",
+											"  postman.setNextRequest(null);\r",
+											"}"
+										],
+										"type": "text/javascript"
+									}
+								}
+							],
+							"request": {
+								"method": "DELETE",
+								"header": [],
+								"url": {
+									"raw": "{{baseUrl}}/api/rooms/:id",
+									"host": [
+										"{{baseUrl}}"
+									],
+									"path": [
+										"api",
+										"rooms",
+										":id"
+									],
+									"variable": [
+										{
+											"key": "id",
+											"value": "{{deleteRoomId}}",
+											"description": "(Required) "
+										}
+									]
+								}
+							},
+							"response": []
+						}
+					],
+					"auth": {
+						"type": "bearer",
+						"bearer": [
+							{
+								"key": "token",
+								"value": "{{authToken}}",
+								"type": "string"
+							}
+						]
+					},
+					"event": [
+						{
+							"listen": "prerequest",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									""
+								]
+							}
+						},
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									""
+								]
+							}
+						}
+					]
+				},
+				{
+					"name": "messages",
+					"item": [
+						{
+							"name": "messages/create",
+							"event": [
+								{
+									"listen": "prerequest",
+									"script": {
+										"exec": [
+											"const rooms = JSON.parse(pm.environment.get('rooms'));\r",
+											"\r",
+											"let thisCase = undefined;\r",
+											"const caseId = parseInt(pm.environment.get('caseId'));\r",
+											"\r",
+											"switch(caseId) {\r",
+											"case 0:\r",
+											"  const users = JSON.parse(pm.environment.get('users'));\r",
+											"  pm.environment.set('authToken', users[1].authToken);\r",
+											"  thisCase = {\r",
+											"    body: {\r",
+											"      \"roomId\": rooms[0]._id,\r",
+											"      \"message\": \"cupidatat nisi sunt\",\r",
+											"      \"clientId\": \"dolore velit in\",\r",
+											"    },\r",
+											"    expect: {},\r",
+											"  }\r",
+											"  break;\r",
+											"case 1:\r",
+											"  const users = JSON.parse(pm.environment.get('users'));\r",
+											"  pm.environment.set('authToken', users[0].authToken);\r",
+											"  thisCase = {\r",
+											"    body: {\r",
+											"      \"roomId\": rooms[0]._id,\r",
+											"      \"message\": \"cupidatat nisi sunt lorem\",\r",
+											"      \"clientId\": \"velit in dolore\",\r",
+											"    },\r",
+											"    expect: {},\r",
+											"  }\r",
+											"  break;\r",
+											"\r",
+											"default: // end\r",
+											"  thisCase = {\r",
+											"    body: {},\r",
+											"    expect: {},\r",
+											"    end: true,\r",
+											"  }\r",
+											"}\r",
+											"\r",
+											"pm.environment.set('thisCase', JSON.stringify(thisCase));\r",
+											"pm.environment.set('queries', Object.keys(thisCase.body).map(key => `${key}=${thisCase.body[key]}`).join('&'));\r",
+											""
+										],
+										"type": "text/javascript"
+									}
+								}
+							],
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{{body}}"
+								},
+								"url": {
+									"raw": "{{baseUrl}}/api/messages",
+									"host": [
+										"{{baseUrl}}"
+									],
+									"path": [
+										"api",
+										"messages"
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "messages/list",
+							"request": {
+								"auth": {
+									"type": "bearer",
+									"bearer": [
+										{
+											"key": "token",
+											"value": "<Bearer Token>",
+											"type": "string"
+										}
+									]
+								},
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{baseUrl}}/api/messages?roomId=et exercitation Ut fugiat&messageTime=-1801723.4038677216&prevLimit=-1801723.4038677216&nextLimit=-1801723.4038677216&reverse=false&includeDeleted=false&includeUpdated=false",
+									"host": [
+										"{{baseUrl}}"
+									],
+									"path": [
+										"api",
+										"messages"
+									],
+									"query": [
+										{
+											"key": "roomId",
+											"value": "et exercitation Ut fugiat",
+											"description": "(Required) "
+										},
+										{
+											"key": "messageTime",
+											"value": "-1801723.4038677216",
+											"description": "Specifies the timestamp to be the reference point of the query, in 'Unix milliseconds'."
+										},
+										{
+											"key": "prevLimit",
+											"value": "-1801723.4038677216"
+										},
+										{
+											"key": "nextLimit",
+											"value": "-1801723.4038677216"
+										},
+										{
+											"key": "reverse",
+											"value": "false",
+											"description": "Determines whether to sort the results in reverse order.\n    If true, returns a list of messages which the latest comes at first and the earliest at last. the results are sorted in reverse order.\n    If false, returns a list of messages which the earliest comes at first and the latest at last.\n    (Default: false)"
+										},
+										{
+											"key": "includeDeleted",
+											"value": "false"
+										},
+										{
+											"key": "includeUpdated",
+											"value": "false"
+										}
+									]
+								}
+							},
 							"response": [
 								{
-									"name": "Register new account with email and password",
+									"name": "Untitled Example",
 									"originalRequest": {
-										"method": "POST",
-										"header": [],
-										"body": {
-											"mode": "raw",
-											"raw": "{\n    \"username\": \"irure in\",\n    \"fullName\": \"anim commodo\",\n    \"password\": \"exercitation sit par\",\n    \"email\": \"dolor irure\"\n}"
-										},
+										"method": "GET",
+										"header": [
+											{
+												"description": "Added as a part of security scheme: bearer",
+												"key": "Authorization",
+												"value": "Bearer <token>"
+											}
+										],
 										"url": {
-											"raw": "{{baseUrl}}/api/register",
+											"raw": "{{baseUrl}}/api/messages?roomId=et exercitation Ut fugiat&messageTime=-1801723.4038677216&prevLimit=-1801723.4038677216&nextLimit=-1801723.4038677216&reverse=false&includeDeleted=false&includeUpdated=false",
 											"host": [
 												"{{baseUrl}}"
 											],
 											"path": [
 												"api",
-												"register"
+												"messages"
+											],
+											"query": [
+												{
+													"key": "roomId",
+													"value": "et exercitation Ut fugiat"
+												},
+												{
+													"key": "messageTime",
+													"value": "-1801723.4038677216"
+												},
+												{
+													"key": "prevLimit",
+													"value": "-1801723.4038677216"
+												},
+												{
+													"key": "nextLimit",
+													"value": "-1801723.4038677216"
+												},
+												{
+													"key": "reverse",
+													"value": "false"
+												},
+												{
+													"key": "includeDeleted",
+													"value": "false"
+												},
+												{
+													"key": "includeUpdated",
+													"value": "false"
+												}
 											]
 										}
 									},
@@ -167,11 +1594,459 @@
 										}
 									],
 									"cookie": [],
-									"body": "{\n \"authToken\": \"aute in quis qui pariatur\",\n \"userId\": \"est consectetur\",\n \"me\": {\n  \"_id\": \"in velit reprehenderit\",\n  \"name\": \"esse consequat\",\n  \"username\": \"et nisi aliquip sed\",\n  \"emails\": [\n   {\n    \"address\": \"ipsum laborum\",\n    \"verified\": true\n   },\n   {\n    \"address\": \"laboris cupidatat\",\n    \"verified\": false\n   }\n  ],\n  \"status\": \"et\",\n  \"statusConnection\": \"incididunt ea\",\n  \"roles\": [\n   \"in in ea commodo laborum\",\n   \"laborum consequat veniam\"\n  ],\n  \"avatar\": \"Duis quis in\",\n  \"active\": true,\n  \"settings\": {\n   \"enableNotification\": true,\n   \"language\": \"nostrud do exercitation dolore\",\n   \"preferences\": {}\n  }\n }\n}"
+									"body": "{\n \"items\": [\n  {\n   \"_id\": \"exercitation ullamco fugiat in\",\n   \"roomId\": \"in et deserunt sunt mollit\",\n   \"message\": \"dolor u\",\n   \"clientId\": \"ut adipisicing\",\n   \"senderId\": \"sit commodo ipsum\",\n   \"createdAt\": \"1992-07-12T08:28:48.743Z\",\n   \"updatedAt\": \"2004-02-27T03:39:37.425Z\",\n   \"isDeleted\": true,\n   \"ts\": false\n  },\n  {\n   \"_id\": \"nulla ut eiusmod\",\n   \"roomId\": \"et sed ut\",\n   \"message\": \"officia dolore Ut\",\n   \"clientId\": \"aliqua tempor magna pariatur\",\n   \"senderId\": \"officia ullamco\",\n   \"createdAt\": \"2000-04-15T03:46:46.071Z\",\n   \"updatedAt\": \"1964-03-02T21:20:05.342Z\",\n   \"isDeleted\": true,\n   \"ts\": false\n  }\n ]\n}"
 								}
 							]
+						},
+						{
+							"name": "messages/detail",
+							"request": {
+								"auth": {
+									"type": "bearer",
+									"bearer": [
+										{
+											"key": "token",
+											"value": "<Bearer Token>",
+											"type": "string"
+										}
+									]
+								},
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{baseUrl}}/api/messages/:id",
+									"host": [
+										"{{baseUrl}}"
+									],
+									"path": [
+										"api",
+										"messages",
+										":id"
+									],
+									"variable": [
+										{
+											"key": "id",
+											"value": "et exercitation Ut fugiat",
+											"description": "(Required) "
+										}
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "messages/read",
+							"request": {
+								"auth": {
+									"type": "bearer",
+									"bearer": [
+										{
+											"key": "token",
+											"value": "<Bearer Token>",
+											"type": "string"
+										}
+									]
+								},
+								"method": "PUT",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n    \"roomId\": \"id\"\n}"
+								},
+								"url": {
+									"raw": "{{baseUrl}}/api/messages/mark_as_read",
+									"host": [
+										"{{baseUrl}}"
+									],
+									"path": [
+										"api",
+										"messages",
+										"mark_as_read"
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "messages/update",
+							"request": {
+								"auth": {
+									"type": "bearer",
+									"bearer": [
+										{
+											"key": "token",
+											"value": "<Bearer Token>",
+											"type": "string"
+										}
+									]
+								},
+								"method": "PUT",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n    \"message\": \"quis esse laborum laboris\"\n}"
+								},
+								"url": {
+									"raw": "{{baseUrl}}/api/messages/:id",
+									"host": [
+										"{{baseUrl}}"
+									],
+									"path": [
+										"api",
+										"messages",
+										":id"
+									],
+									"variable": [
+										{
+											"key": "id",
+											"value": "et exercitation Ut fugiat",
+											"description": "(Required) "
+										}
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "messages/delete",
+							"request": {
+								"auth": {
+									"type": "bearer",
+									"bearer": [
+										{
+											"key": "token",
+											"value": "<Bearer Token>",
+											"type": "string"
+										}
+									]
+								},
+								"method": "DELETE",
+								"header": [],
+								"url": {
+									"raw": "{{baseUrl}}/api/messages/:id",
+									"host": [
+										"{{baseUrl}}"
+									],
+									"path": [
+										"api",
+										"messages",
+										":id"
+									],
+									"variable": [
+										{
+											"key": "id",
+											"value": "et exercitation Ut fugiat",
+											"description": "(Required) "
+										}
+									]
+								}
+							},
+							"response": []
 						}
-						
+					],
+					"auth": {
+						"type": "bearer",
+						"bearer": [
+							{
+								"key": "token",
+								"value": "{{authToken}}",
+								"type": "string"
+							}
+						]
+					},
+					"event": [
+						{
+							"listen": "prerequest",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									""
+								]
+							}
+						},
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									""
+								]
+							}
+						}
+					]
+				},
+				{
+					"name": "contacts",
+					"item": [
+						{
+							"name": "contacts",
+							"event": [
+								{
+									"listen": "prerequest",
+									"script": {
+										"exec": [
+											"const rooms = JSON.parse(pm.environment.get('rooms'));\r",
+											"\r",
+											"const cases = pm.environment.has('cases') ? JSON.parse(pm.environment.get('cases')) :\r",
+											"[\r",
+											"  {\r",
+											"    id: 0,\r",
+											"    body: {\r",
+											"      \"keyword\": \"Thuan\",\r",
+											"    },\r",
+											"  },\r",
+											"  {\r",
+											"    id: 1,\r",
+											"    body: {\r",
+											"      \"limit\": 3,\r",
+											"      \"offset\": 0,\r",
+											"    },\r",
+											"    expect: {},\r",
+											"  },\r",
+											"  {\r",
+											"    id: 2,\r",
+											"    body: {\r",
+											"      \"roomId\": rooms[0]._id,\r",
+											"    },\r",
+											"    expect: {\r",
+											"      excludeIds: rooms[0].users.map(user => user._id),\r",
+											"    },\r",
+											"  },\r",
+											"];\r",
+											"\r",
+											"const thisCase = cases.shift();\r",
+											"pm.environment.set('numCases', cases.length);\r",
+											"pm.environment.set('cases', JSON.stringify(cases));\r",
+											"\r",
+											"pm.environment.set('thisCase', JSON.stringify(thisCase));\r",
+											"pm.environment.set('queries', Object.keys(thisCase.body).map(key => `${key}=${thisCase.body[key]}`).join('&'));\r",
+											""
+										],
+										"type": "text/javascript"
+									}
+								},
+								{
+									"listen": "test",
+									"script": {
+										"exec": [
+											"const numCases = pm.environment.get('numCases');\r",
+											"if (numCases > 0) {\r",
+											"  postman.setNextRequest('contacts');\r",
+											"}\r",
+											"else {\r",
+											"  pm.environment.unset('cases');\r",
+											"  postman.setNextRequest(null);\r",
+											"}\r",
+											"const thisCase = JSON.parse(pm.environment.get('thisCase'));\r",
+											"const expect = thisCase.expect || {};\r",
+											"\r",
+											"/**\r",
+											" * Assertions starts here\r",
+											" */\r",
+											"const resBody = JSON.parse(responseBody);\r",
+											"if (expect.errorCode) {\r",
+											"  tests['Response status 400'] = pm.response.to.have.status(400);\r",
+											"  tests['error code'] = pm.expect(resBody.code).to.eql(expect.errorCode);\r",
+											"}\r",
+											"else {\r",
+											"  tests['Successful POST request'] = pm.response.to.be.success;\r",
+											"  tests['Response has \"type\" property'] = resBody.hasOwnProperty('type');\r",
+											"  \r",
+											"  tests['Response time is less than 200ms'] = pm.expect(pm.response.responseTime).to.be.below(200);\r",
+											"\r",
+											"  // save room\r",
+											"  const rooms = JSON.parse(pm.environment.get('rooms'));\r",
+											"  rooms.push(resBody);\r",
+											"  pm.environment.set('rooms', JSON.stringify(rooms));\r",
+											"}\r",
+											"\r",
+											"switch (thisCase.id) {\r",
+											"  case 0:\r",
+											"    tests['length'] = pm.expect(resBody.items.length).to.eql(1);\r",
+											"    tests['Search keyword'] = pm.expect(resBody.items[0].name).to.include(\"Thuận\");\r",
+											"    break;\r",
+											"  case 1:\r",
+											"    tests['limit'] = pm.expect(resBody.items.length).to.eql(thisCase.limit);\r",
+											"    break;\r",
+											"  case 2:\r",
+											"    const userIds = resBody.map(user => user._id);\r",
+											"    const excludeIds = expect.excludeIds\r",
+											"    tests['exclude users from roomId'] = pm.expect(userIds).to.not.contain.oneOf(excludeIds);\r",
+											"    break;\r",
+											"}\r",
+											""
+										],
+										"type": "text/javascript"
+									}
+								}
+							],
+							"request": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{baseUrl}}/api/contacts?{{queries}}",
+									"host": [
+										"{{baseUrl}}"
+									],
+									"path": [
+										"api",
+										"contacts"
+									],
+									"query": [
+										{
+											"key": "{{queries}}",
+											"value": null
+										}
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "contact",
+							"request": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{baseUrl}}/api/contacts/:id",
+									"host": [
+										"{{baseUrl}}"
+									],
+									"path": [
+										"api",
+										"contacts",
+										":id"
+									],
+									"variable": [
+										{
+											"key": "id",
+											"value": "",
+											"description": "(Required) "
+										}
+									]
+								}
+							},
+							"response": []
+						}
+					],
+					"auth": {
+						"type": "bearer",
+						"bearer": [
+							{
+								"key": "token",
+								"value": "{{authToken}}",
+								"type": "string"
+							}
+						]
+					},
+					"event": [
+						{
+							"listen": "prerequest",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									""
+								]
+							}
+						},
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									""
+								]
+							}
+						}
+					]
+				},
+				{
+					"name": "devices",
+					"item": [
+						{
+							"name": "Device Controller register Device",
+							"request": {
+								"auth": {
+									"type": "bearer",
+									"bearer": [
+										{
+											"key": "token",
+											"value": "<Bearer Token>",
+											"type": "string"
+										}
+									]
+								},
+								"method": "POST",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n    \"token\": \"voluptate non\",\n    \"platform\": \"OTHER\"\n}"
+								},
+								"url": {
+									"raw": "{{baseUrl}}/api/devices",
+									"host": [
+										"{{baseUrl}}"
+									],
+									"path": [
+										"api",
+										"devices"
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "Device Controller unregister Device",
+							"request": {
+								"auth": {
+									"type": "bearer",
+									"bearer": [
+										{
+											"key": "token",
+											"value": "<Bearer Token>",
+											"type": "string"
+										}
+									]
+								},
+								"method": "DELETE",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n    \"token\": \"voluptate non\",\n    \"platform\": \"OTHER\"\n}"
+								},
+								"url": {
+									"raw": "{{baseUrl}}/api/devices",
+									"host": [
+										"{{baseUrl}}"
+									],
+									"path": [
+										"api",
+										"devices"
+									]
+								}
+							},
+							"response": []
+						}
 					]
 				}
 			]
