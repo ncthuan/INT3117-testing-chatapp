@@ -1,0 +1,16 @@
+version: "3.3"
+services:
+  app:
+    restart: "no"
+    volumes:
+      - ../:/app
+      - /app/node_modules
+      - /app/dist
+    #entrypoint: ["echo", "Service app disabled"]
+
+  mongo:
+    ports:
+      - ${MONGO_EXPOSE_PORT}:${MONGO_PORT}
+  redis:
+    ports:
+      - ${REDIS_EXPOSE_PORT}:${REDIS_PORT}

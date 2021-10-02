@@ -1,0 +1,41 @@
+<html>
+  <head>
+    <script src="https://cdn.socket.io/4.0.1/socket.io.js"></script>
+    <script>
+      let logString = '';
+      function updateLogString(msg) {
+        let time = new Date().toLocaleTimeString();
+        logString += '[' + time + '] ' + msg + '\n';
+        console.log(msg);
+        document.getElementById('textarea').value = logString;
+      }
+      const socket = io('http://localhost:3001', {
+        auth: {
+          token: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjYxMzQyY2Y4YjAwMTc2MWE2ZmFlNTUzZiIsImZ1bGxOYW1lIjoiVHVlIE5ndXllbiIsInJvbGVzIjpbIlVTRVIiXSwidHlwZSI6IlVTRVIiLCJpYXQiOjE2MzA4MDkzMzYsImV4cCI6MTYzMDg5NTczNn0.qOjVOBvJzNCZaAJEXp7GSL5phPw_FJm8ygL11DLKjoE'
+        },
+        transports: ['websocket'],
+      });
+
+      socket.on('connect', function() {
+        updateLogString('Connected');
+      });
+
+      socket.on('room.events', function(data) {
+        updateLogString(JSON.stringify(data));
+      });
+
+      socket.on('exception', function(data) {
+        updateLogString(JSON.stringify(data));
+      });
+
+      socket.on('disconnect', function() {
+        updateLogString('Disconnected');
+      });
+
+    </script>
+  </head>
+
+  <body>
+    <textarea id='textarea' readonly='true' style="width: 100%; height: 100%;"></textarea>
+  </body>
+</html>

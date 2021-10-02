@@ -1,0 +1,15 @@
+version: "3.3"
+services:
+  adminer:
+    image: adminer
+    ports:
+      - 8080:8080
+  redisinsight:
+    image: redislabs/redisinsight:latest
+    ports:
+      - 8001:8001
+    volumes:
+      - redisinsight_vol:/db'
+volumes:
+  redisinsight_vol:
+    driver: local

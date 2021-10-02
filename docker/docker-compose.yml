@@ -1,0 +1,58 @@
+version: '3.3'
+services:
+  app:
+    build:
+      context: ..
+      dockerfile: Dockerfile
+    image: ${APP_NAME}
+    container_name: ${APP_NAME}
+    restart: always
+    environment:
+      - NODE_ENV=${ENV_NAME}
+      - SET_CONTAINER_TIMEZONE=true
+      - CONTAINER_TIMEZONE=UTC
+      - TZ=UTC
+      - ENV_NAME=${ENV_NAME}
+      - DB_WRITE_HOST=${MONGO_NAME}
+      - DB_READ_HOST=${MONGO_NAME}
+      - REDIS_URL=redis://:${REDIS_PASSWORD}@${REDIS_NAME}:6379
+    ports:
+      - ${APP_EXPOSE_PORT}:${APP_PORT}
+    volumes:
+      - ../:/app
+      - /app/node_modules
+      - /app/dist
+    depends_on:
+      - 'mongo'
+      - 'redis'
+    links:
+      - 'mongo'
+      - 'redis'
+
+  #Stacks
+  mongo:
+    image: mongo:4.2
+    container_name: ${MONGO_NAME}
+    hostname: ${MONGO_NAME}
+    environment:
+      - MONGO_LOG_DIR=/dev/null
+      - MONGO_INITDB_ROOT_USERNAME=${MONGO_USER}
+      - MONGO_INITDB_ROOT_PASSWORD=${MONGO_PASS}
+      - MONGO_INITDB_DATABASE=${MONGO_DB}
+    ports:
+      - ${MONGO_EXPOSE_PORT}:${MONGO_PORT}
+    volumes:
+      # - ./docker-utils/mongo-init.js:/docker-entrypoint-initdb.d/001_users.js:ro
+      - mongo_vol:/data/db
+    restart: always
+  redis:
+    image: redis:6-alpine
+    container_name: ${REDIS_NAME}
+    hostname: ${REDIS_NAME}
+    command: redis-server --requirepass ${REDIS_PASSWORD}
+    ports:
+      - '${REDIS_EXPOSE_PORT}:${REDIS_PORT}'
+    restart: always
+volumes:
+  mongo_vol:
+    driver: local
