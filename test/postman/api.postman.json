@@ -646,6 +646,17 @@
 											"  }\r",
 											"  break;\r",
 											"\r",
+											"case 4:\r",
+											"  thisCase = {\r",
+											"    body: {\r",
+											"      \"type\": \"group\",\r",
+											"      \"userIds\": [ user1._id, user2._id ],\r",
+											"      \"name\": \"test rooms/leave\",\r",
+											"    },\r",
+											"    expect: {},\r",
+											"  }\r",
+											"  break;\r",
+											"\r",
 											"default: // end\r",
 											"  thisCase = {\r",
 											"    body: {\r",
@@ -682,10 +693,13 @@
 											"}\r",
 											"else {\r",
 											"  tests['Successful POST request'] = pm.response.to.be.success;\r",
+											"  tests['Response has \"name\" property'] = resBody.hasOwnProperty('name');\r",
 											"  tests['Response has \"type\" property'] = resBody.hasOwnProperty('type');\r",
 											"  if (resBody.type == 'direct') {\r",
+											"    tests['direct room can only have 2 users'] = pm.expect(resBody.users.length).to.eql(2);\r",
 											"    tests['Response has \"status\" property'] = resBody.hasOwnProperty('status');\r",
 											"    tests['Response has \"isRead\" property'] = resBody.hasOwnProperty('isRead');\r",
+											"    tests['Response has \"isRead\" == false'] = pm.expect(resBody.isRead).to.eql(false);\r",
 											"  }\r",
 											"\r",
 											"  // save room\r",
@@ -717,6 +731,11 @@
 											"else {\r",
 											"  pm.environment.set('caseId', 0);\r",
 											"  postman.setNextRequest('rooms/list');\r",
+											"\r",
+											"  const users = JSON.parse(pm.environment.get('users'));\r",
+											"  const rooms = JSON.parse(pm.environment.get('rooms'));\r",
+											"  console.log(users);\r",
+											"  console.log(rooms);\r",
 											"}"
 										],
 										"type": "text/javascript"
@@ -768,10 +787,37 @@
 											"}\r",
 											"else {\r",
 											"  tests['Successful request'] = pm.response.to.be.success;\r",
-											"  // tests['Response has \"type\" property'] = resBody.hasOwnProperty('type');\r",
-											"  if (resBody.type == 'direct') {\r",
-											"    // tests['Response has \"status\" property'] = resBody.hasOwnProperty('status');\r",
-											"    // tests['Response has \"isRead\" property'] = resBody.hasOwnProperty('isRead');\r",
+											"  const schema = {\r",
+											"    \"type\": \"object\",\r",
+											"    \"properties\": {\r",
+											"      \"items\": {\r",
+											"        \"type\": \"array\",\r",
+											"        \"items\": {\r",
+											"          \"type\": \"object\",\r",
+											"          \"required\": [\r",
+											"            \"_id\",\r",
+											"            \"name\",\r",
+											"            \"type\",\r",
+											"            \"unreadCount\",\r",
+											"          ],\r",
+											"          \"properties\": {\r",
+											"            \"_id\": {\"type\": \"string\"},\r",
+											"            \"name\": {\"type\": \"string\"},\r",
+											"            \"type\": {\"type\": \"string\"},\r",
+											"            \"unreadCount\": {\"type\": \"number\"},\r",
+											"          }\r",
+											"        }\r",
+											"      },\r",
+											"      \"token\": {\"type\": [\"string\", \"null\"]},\r",
+											"      \"pageSize\": {\"type\": \"number\"},\r",
+											"    }\r",
+											"  };\r",
+											"  tests['Correct response schema'] = pm.response.to.have.jsonSchema(schema);\r",
+											"\r",
+											"  const directRoom = resBody.items.find(room => room.type =='direct');\r",
+											"  if (directRoom) {\r",
+											"    tests['directRoom has \"status\" property'] = directRoom.hasOwnProperty('status');\r",
+											"    tests['directRoom has \"isRead\" property'] = directRoom.hasOwnProperty('isRead');\r",
 											"  }\r",
 											"  \r",
 											"\r",
@@ -780,9 +826,15 @@
 											"switch (caseId) {\r",
 											"case 0:\r",
 											"  tests['Response has \"token\" property'] = resBody.hasOwnProperty('token');\r",
+											"  tests['page size'] = pm.expect(resBody.pageSize).to.eql(thisCase.body.limit);\r",
 											"  pm.environment.set('pagingToken', resBody.token);\r",
 											"  break;\r",
 											"case 1:\r",
+											"  tests['Response time is less than 200ms'] = pm.expect(pm.response.responseTime).to.be.below(200);\r",
+											"  tests['Search'] = pm.expect(resBody.items.length).to.eql(1);\r",
+											"  tests['Search'] = pm.expect(resBody.items[0].name).to.include(thisCase.body.search);\r",
+											"  break;\r",
+											"case 2:\r",
 											"  tests['Response time is less than 200ms'] = pm.expect(pm.response.responseTime).to.be.below(200);\r",
 											"  tests['Search'] = pm.expect(resBody.items.length).to.eql(1);\r",
 											"  tests['Search'] = pm.expect(resBody.items[0].name).to.include(thisCase.body.search);\r",
@@ -824,7 +876,15 @@
 											"  thisCase = {\r",
 											"    body: {\r",
 											"      // pagingToken,\r",
-											"      \"search\": \"savvycom\",\r",
+											"      \"search\": \"savvy\",\r",
+											"    },\r",
+											"    expect: {},\r",
+											"  }\r",
+											"  break;\r",
+											"case 2:\r",
+											"  thisCase = {\r",
+											"    body: {\r",
+											"      \"search\": \"olore\",\r",
 											"    },\r",
 											"    expect: {},\r",
 											"  }\r",
@@ -1095,15 +1155,16 @@
 											"\r",
 											"switch(caseId) {\r",
 											"case 0:\r",
+											"  const room = rooms.find(r => r.name == 'test rooms/leave');\r",
 											"  thisCase = {\r",
-											"    leaveRoomId: rooms[2]._id,\r",
+											"    leaveRoomId: room._id,\r",
 											"    expect: {},\r",
 											"  }\r",
 											"  break;\r",
 											"\r",
 											"default: // end\r",
 											"  thisCase = {\r",
-											"    leaveRoomId: rooms[0]._id,\r",
+											"    leaveRoomId: rooms.find(room => room.type == 'direct')._id,\r",
 											"    expect: {\r",
 											"      errorCode: 'CANNOT_LEAVE_DIRECT_CHAT',\r",
 											"    },\r",
@@ -1294,7 +1355,7 @@
 											"\r",
 											"switch (caseId) {\r",
 											"case 0:\r",
-											"  pm.sendRequest({\r",
+											"  pm.sendRequest({ // rooms/detail\r",
 											"    method: 'GET',\r",
 											"    url: `${pm.environment.get('baseUrl')}/api/rooms/${thisCase.blockRoomId}`,\r",
 											"    header: { 'Authorization': `Bearer ${pm.environment.get('authToken')}` },\r",
@@ -1305,7 +1366,7 @@
 											"\r",
 											"  const users = JSON.parse(pm.environment.get('users'));\r",
 											"  const blockedUser = users.find(user => user.me._id == thisCase.body.userId)\r",
-											"  pm.sendRequest({\r",
+											"  pm.sendRequest({ // messages/create\r",
 											"    method: 'POST',\r",
 											"    url: `${pm.environment.get('baseUrl')}/api/messages`,\r",
 											"    header: {\r",
@@ -1326,7 +1387,7 @@
 											"  });\r",
 											"  break;\r",
 											"case 1:\r",
-											"  pm.sendRequest({\r",
+											"  pm.sendRequest({ // rooms/detail\r",
 											"    method: 'GET',\r",
 											"    url: `${pm.environment.get('baseUrl')}/api/rooms/${thisCase.blockRoomId}`,\r",
 											"    header: { 'Authorization': `Bearer ${pm.environment.get('authToken')}` }\r",
@@ -1345,7 +1406,7 @@
 											"}\r",
 											"else {\r",
 											"  pm.environment.set('caseId', 0);\r",
-											"  postman.setNextRequest('rooms/delete');\r",
+											"  postman.setNextRequest('rooms/add-member');\r",
 											"}"
 										],
 										"type": "text/javascript"
@@ -1379,6 +1440,321 @@
 										{
 											"key": "id",
 											"value": "{{blockRoomId}}",
+											"description": "(Required) "
+										}
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "rooms/add-member",
+							"event": [
+								{
+									"listen": "prerequest",
+									"script": {
+										"exec": [
+											"const rooms = JSON.parse(pm.environment.get('rooms'));\r",
+											"\r",
+											"let thisCase = undefined;\r",
+											"const caseId = parseInt(pm.environment.get('caseId'));\r",
+											"\r",
+											"switch(caseId) {\r",
+											"case 0:\r",
+											"  const room = rooms.find(r => r.name == 'nhà văn hóa');\r",
+											"  const userIds = room.users.map(user => user._id);\r",
+											"  const users = JSON.parse(pm.environment.get('users'));\r",
+											"  const outsider = users.find(user => !userIds.includes(user.me._id));\r",
+											"  console.log(outsider);\r",
+											"  thisCase = {\r",
+											"    roomId: room._id,\r",
+											"    body: {\r",
+											"      userIds: [\r",
+											"        room.users[0]._id,\r",
+											"        room.users[0]._id,\r",
+											"        outsider.me._id,\r",
+											"        outsider.me._id,\r",
+											"      ]\r",
+											"    },\r",
+											"    data: {\r",
+											"      room,\r",
+											"      outsider,\r",
+											"    },\r",
+											"    expect: {},\r",
+											"  }\r",
+											"  break;\r",
+											"\r",
+											"default: // end\r",
+											"  thisCase = { // cannot add member for direct chat\r",
+											"    roomId: rooms[0]._id,\r",
+											"    body: { userIds: [\"614102d48b114945e491a9d0\"] },\r",
+											"    expect: {\r",
+											"      errorCode: 'UNAUTHORIZED',\r",
+											"    },\r",
+											"    end: true,\r",
+											"  }\r",
+											"}\r",
+											"\r",
+											"pm.environment.set('thisCase', JSON.stringify(thisCase));\r",
+											"pm.environment.set('body', JSON.stringify(thisCase.body));\r",
+											"pm.environment.set('roomId', thisCase.roomId);"
+										],
+										"type": "text/javascript"
+									}
+								},
+								{
+									"listen": "test",
+									"script": {
+										"exec": [
+											"const thisCase = JSON.parse(pm.environment.get('thisCase'));\r",
+											"const caseId = parseInt(pm.environment.get('caseId'));\r",
+											"\r",
+											"/**\r",
+											" * Assertions starts here\r",
+											" */\r",
+											"if (thisCase.expect.errorCode) {\r",
+											"  const resBody = JSON.parse(responseBody);\r",
+											"  tests['Response status 400'] = pm.response.to.have.status(400);\r",
+											"  tests[`error code: ${thisCase.expect.errorCode}`] = pm.expect(resBody.code).to.eql(thisCase.expect.errorCode);\r",
+											"}\r",
+											"else {\r",
+											"  tests['Success request'] = pm.response.to.be.success;\r",
+											"  // tests['Response has \"status\" property'] = resBody.hasOwnProperty('status');\r",
+											"  \r",
+											"}\r",
+											"\r",
+											"switch (caseId) {\r",
+											"case 0:\r",
+											"  const outsider = thisCase.data.outsider;\r",
+											"  const room = thisCase.data.room;\r",
+											"  pm.sendRequest({ // rooms/list\r",
+											"    method: 'GET',\r",
+											"    url: `${pm.environment.get('baseUrl')}/api/rooms?order=latest&limit=1`,\r",
+											"    header: { 'Authorization': `Bearer ${outsider.authToken}` }\r",
+											"  },\r",
+											"  (err, response) => {\r",
+											"    const roomList = response.json().items;\r",
+											"    if (roomList.length == 0) {\r",
+											"      tests[\"rooms/add-member case 0\"] = false;\r",
+											"      return;\r",
+											"    }\r",
+											"    const addedRoom = roomList[0];\r",
+											"    tests[\"Added member rooms/list\"] = pm.expect(addedRoom._id).to.eql(room._id);\r",
+											"  });\r",
+											"\r",
+											"  pm.sendRequest({ // rooms/detail\r",
+											"    method: 'GET',\r",
+											"    url: `${pm.environment.get('baseUrl')}/api/rooms/${thisCase.roomId}`,\r",
+											"    header: { 'Authorization': `Bearer ${outsider.authToken}` },\r",
+											"  },\r",
+											"  (err, response) => {\r",
+											"    const addedRoom = response.json();\r",
+											"    const addedRoomUserIds = addedRoom.users.map(user => user._id);\r",
+											"    tests[\"Added member rooms/detail\"] = pm.expect(addedRoomUserIds).to.includes(outsider.me._id);\r",
+											"    tests[\"one member added\"] = pm.expect(addedRoom.users.length).to.eql(room.users.length+1);\r",
+											"  });\r",
+											"  break;\r",
+											"\r",
+											"default:\r",
+											"}\r",
+											"\r",
+											"if (!thisCase.end) {\r",
+											"  pm.environment.set('caseId', caseId+1)\r",
+											"  postman.setNextRequest('rooms/add-member');  \r",
+											"}\r",
+											"else {\r",
+											"  pm.environment.set('caseId', 0);\r",
+											"  postman.setNextRequest('rooms/remove-user');\r",
+											"}"
+										],
+										"type": "text/javascript"
+									}
+								}
+							],
+							"request": {
+								"method": "POST",
+								"header": [],
+								"body": {
+									"mode": "raw",
+									"raw": "{{body}}",
+									"options": {
+										"raw": {
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "{{baseUrl}}/api/rooms/:id/add-member",
+									"host": [
+										"{{baseUrl}}"
+									],
+									"path": [
+										"api",
+										"rooms",
+										":id",
+										"add-member"
+									],
+									"variable": [
+										{
+											"key": "id",
+											"value": "{{roomId}}",
+											"description": "(Required) "
+										}
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "rooms/remove-user",
+							"event": [
+								{
+									"listen": "prerequest",
+									"script": {
+										"exec": [
+											"const rooms = JSON.parse(pm.environment.get('rooms'));\r",
+											"const users = JSON.parse(pm.environment.get('users'));\r",
+											"\r",
+											"let thisCase = undefined;\r",
+											"const caseId = parseInt(pm.environment.get('caseId'));\r",
+											"\r",
+											"switch(caseId) {\r",
+											"case 0:\r",
+											"  thisCase = {\r",
+											"    roomId: rooms[0]._id,\r",
+											"    body: { userId: users[0].me._id },\r",
+											"    expect: {\r",
+											"      errorCode: 'CANNOT_SELF_REMOVE',\r",
+											"    },\r",
+											"  }\r",
+											"  break;\r",
+											"case 1:\r",
+											"  const room = rooms.find(r => r.name == 'nhà văn hóa');\r",
+											"  const userIds = room.users.map(user => user._id);\r",
+											"  const removedUser = room.users.find(user => user._id != room.createdBy);\r",
+											"  console.log(removedUser);\r",
+											"  thisCase = {\r",
+											"    roomId: room._id,\r",
+											"    body: { userId: removedUser._id },\r",
+											"    expect: {},\r",
+											"  }\r",
+											"  break;\r",
+											"\r",
+											"default: // end\r",
+											"  thisCase = {\r",
+											"    roomId: rooms.find(r => r.name == 'nhà văn hóa')._id,\r",
+											"    body: { userId: \"614102d48b114945e491a9d0\" },\r",
+											"    expect: {\r",
+											"      errorCode: \"USER_NOT_FOUND\",\r",
+											"    },\r",
+											"    end: true,\r",
+											"  }\r",
+											"}\r",
+											"\r",
+											"pm.environment.set('thisCase', JSON.stringify(thisCase));\r",
+											"pm.environment.set('body', JSON.stringify(thisCase.body));\r",
+											"pm.environment.set('roomId', thisCase.roomId);"
+										],
+										"type": "text/javascript"
+									}
+								},
+								{
+									"listen": "test",
+									"script": {
+										"exec": [
+											"const thisCase = JSON.parse(pm.environment.get('thisCase'));\r",
+											"const caseId = parseInt(pm.environment.get('caseId'));\r",
+											"\r",
+											"/**\r",
+											" * Assertions starts here\r",
+											" */\r",
+											"if (thisCase.expect.errorCode) {\r",
+											"  const resBody = JSON.parse(responseBody);\r",
+											"  tests['Response status 400'] = pm.response.to.have.status(400);\r",
+											"  tests[`error code: ${thisCase.expect.errorCode}`] = pm.expect(resBody.code).to.eql(thisCase.expect.errorCode);\r",
+											"}\r",
+											"else {\r",
+											"  tests['Success request'] = pm.response.to.be.success;\r",
+											"  // tests['Response has \"status\" property'] = resBody.hasOwnProperty('status');\r",
+											"  \r",
+											"}\r",
+											"\r",
+											"switch (caseId) {\r",
+											"case 0:\r",
+											"  break;\r",
+											"\r",
+											"case 1:\r",
+											"  pm.sendRequest({ // rooms/detail\r",
+											"    method: 'GET',\r",
+											"    url: `${pm.environment.get('baseUrl')}/api/rooms/${thisCase.roomId}`,\r",
+											"    header: { 'Authorization': `Bearer ${pm.environment.get('authToken')}` },\r",
+											"  },\r",
+											"  (err, response) => {\r",
+											"    const room = response.json();\r",
+											"    const userIds = room.users.map(user => user._id);\r",
+											"    tests[\"removed member\"] = pm.expect(userIds).to.not.includes(thisCase.body.userId);\r",
+											"  });\r",
+											"  \r",
+											"  pm.sendRequest({ // rooms/add-member\r",
+											"    method: 'POST',\r",
+											"    url: `${pm.environment.get('baseUrl')}/api/rooms/${thisCase.roomId}/add-member`,\r",
+											"    header: {\r",
+											"      'Content-Type': 'application/json',\r",
+											"      'Authorization': `Bearer ${pm.environment.get('authToken')}`\r",
+											"    },\r",
+											"    body: {\r",
+											"      mode: 'raw',\r",
+											"      raw: JSON.stringify({ userIds: [thisCase.body.userId] })\r",
+											"    }\r",
+											"  },\r",
+											"  (err, response) => {\r",
+											"    tests['Success request'] = pm.expect(response).to.be.success;\r",
+											"  });\r",
+											"  break;\r",
+											"\r",
+											"default:\r",
+											"}\r",
+											"\r",
+											"if (!thisCase.end) {\r",
+											"  pm.environment.set('caseId', caseId+1)\r",
+											"  postman.setNextRequest('rooms/remove-user');  \r",
+											"}\r",
+											"else {\r",
+											"  pm.environment.set('caseId', 0);\r",
+											"  postman.setNextRequest('rooms/delete');\r",
+											"}"
+										],
+										"type": "text/javascript"
+									}
+								}
+							],
+							"request": {
+								"method": "POST",
+								"header": [],
+								"body": {
+									"mode": "raw",
+									"raw": "{{body}}",
+									"options": {
+										"raw": {
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "{{baseUrl}}/api/rooms/:id/remove-user",
+									"host": [
+										"{{baseUrl}}"
+									],
+									"path": [
+										"api",
+										"rooms",
+										":id",
+										"remove-user"
+									],
+									"variable": [
+										{
+											"key": "id",
+											"value": "{{roomId}}",
 											"description": "(Required) "
 										}
 									]
@@ -1500,238 +1876,6 @@
 								}
 							},
 							"response": []
-						},
-						{
-							"name": "rooms/add-member",
-							"event": [
-								{
-									"listen": "prerequest",
-									"script": {
-										"exec": [
-											"const rooms = JSON.parse(pm.environment.get('rooms'));\r",
-											"\r",
-											"let thisCase = undefined;\r",
-											"const caseId = parseInt(pm.environment.get('caseId'));\r",
-											"\r",
-											"switch(caseId) {\r",
-											"case 0:\r",
-											"  thisCase = {\r",
-											"    deleteRoomId: rooms[0]._id,\r",
-											"    expect: {},\r",
-											"  }\r",
-											"  break;\r",
-											"// case 1:\r",
-											"//   thisCase = {\r",
-											"//     expect: {},\r",
-											"//   }\r",
-											"//   break;\r",
-											"\r",
-											"default: // end\r",
-											"  thisCase = {\r",
-											"    deleteRoomId: \"614102d48b114945e491a9d0\",\r",
-											"    expect: {\r",
-											"      errorCode: \"ROOM_NOT_FOUND\",\r",
-											"    },\r",
-											"    end: true,\r",
-											"  }\r",
-											"}\r",
-											"\r",
-											"pm.environment.set('thisCase', JSON.stringify(thisCase));\r",
-											"pm.environment.set('body', JSON.stringify(thisCase.body));\r",
-											"pm.environment.set('deleteRoomId', thisCase.deleteRoomId);"
-										],
-										"type": "text/javascript"
-									}
-								},
-								{
-									"listen": "test",
-									"script": {
-										"exec": [
-											"const thisCase = JSON.parse(pm.environment.get('thisCase'));\r",
-											"const caseId = parseInt(pm.environment.get('caseId'));\r",
-											"\r",
-											"/**\r",
-											" * Assertions starts here\r",
-											" */\r",
-											"if (thisCase.expect.errorCode) {\r",
-											"  const resBody = JSON.parse(responseBody);\r",
-											"  tests['Response status 400'] = pm.response.to.have.status(400);\r",
-											"  tests[`error code: ${thisCase.expect.errorCode}`] = pm.expect(resBody.code).to.eql(thisCase.expect.errorCode);\r",
-											"}\r",
-											"else {\r",
-											"  tests['Success request'] = pm.response.to.be.success;\r",
-											"  // tests['Response has \"status\" property'] = resBody.hasOwnProperty('status');\r",
-											"  \r",
-											"}\r",
-											"\r",
-											"switch (caseId) {\r",
-											"case 0:\r",
-											"  pm.sendRequest({\r",
-											"    method: 'GET',\r",
-											"    url: `${pm.environment.get('baseUrl')}/api/rooms`,\r",
-											"    header: { 'Authorization': `Bearer ${pm.environment.get('authToken')}` }\r",
-											"  },\r",
-											"  (err, response) => {\r",
-											"    tests[\"Room disappear from list\"] = pm.expect(response.json().items.map(i=>i._id)).to.not.include(thisCase.deleteRoomId);\r",
-											"  });\r",
-											"  break;\r",
-											"\r",
-											"default:\r",
-											"}\r",
-											"\r",
-											"if (!thisCase.end) {\r",
-											"  pm.environment.set('caseId', caseId+1)\r",
-											"  postman.setNextRequest('rooms/add-member');  \r",
-											"}\r",
-											"else {\r",
-											"  pm.environment.set('caseId', 0);\r",
-											"  postman.setNextRequest(null);\r",
-											"}"
-										],
-										"type": "text/javascript"
-									}
-								}
-							],
-							"request": {
-								"method": "POST",
-								"header": [],
-								"url": {
-									"raw": "{{baseUrl}}/api/rooms/:id/add-member",
-									"host": [
-										"{{baseUrl}}"
-									],
-									"path": [
-										"api",
-										"rooms",
-										":id",
-										"add-member"
-									],
-									"variable": [
-										{
-											"key": "id",
-											"value": "{{deleteRoomId}}",
-											"description": "(Required) "
-										}
-									]
-								}
-							},
-							"response": []
-						},
-						{
-							"name": "rooms/remove-member",
-							"event": [
-								{
-									"listen": "prerequest",
-									"script": {
-										"exec": [
-											"const rooms = JSON.parse(pm.environment.get('rooms'));\r",
-											"\r",
-											"let thisCase = undefined;\r",
-											"const caseId = parseInt(pm.environment.get('caseId'));\r",
-											"\r",
-											"switch(caseId) {\r",
-											"case 0:\r",
-											"  thisCase = {\r",
-											"    deleteRoomId: rooms[0]._id,\r",
-											"    expect: {},\r",
-											"  }\r",
-											"  break;\r",
-											"// case 1:\r",
-											"//   thisCase = {\r",
-											"//     expect: {},\r",
-											"//   }\r",
-											"//   break;\r",
-											"\r",
-											"default: // end\r",
-											"  thisCase = {\r",
-											"    deleteRoomId: \"614102d48b114945e491a9d0\",\r",
-											"    expect: {\r",
-											"      errorCode: \"ROOM_NOT_FOUND\",\r",
-											"    },\r",
-											"    end: true,\r",
-											"  }\r",
-											"}\r",
-											"\r",
-											"pm.environment.set('thisCase', JSON.stringify(thisCase));\r",
-											"pm.environment.set('body', JSON.stringify(thisCase.body));\r",
-											"pm.environment.set('deleteRoomId', thisCase.deleteRoomId);"
-										],
-										"type": "text/javascript"
-									}
-								},
-								{
-									"listen": "test",
-									"script": {
-										"exec": [
-											"const thisCase = JSON.parse(pm.environment.get('thisCase'));\r",
-											"const caseId = parseInt(pm.environment.get('caseId'));\r",
-											"\r",
-											"/**\r",
-											" * Assertions starts here\r",
-											" */\r",
-											"if (thisCase.expect.errorCode) {\r",
-											"  const resBody = JSON.parse(responseBody);\r",
-											"  tests['Response status 400'] = pm.response.to.have.status(400);\r",
-											"  tests[`error code: ${thisCase.expect.errorCode}`] = pm.expect(resBody.code).to.eql(thisCase.expect.errorCode);\r",
-											"}\r",
-											"else {\r",
-											"  tests['Success request'] = pm.response.to.be.success;\r",
-											"  // tests['Response has \"status\" property'] = resBody.hasOwnProperty('status');\r",
-											"  \r",
-											"}\r",
-											"\r",
-											"switch (caseId) {\r",
-											"case 0:\r",
-											"  pm.sendRequest({\r",
-											"    method: 'GET',\r",
-											"    url: `${pm.environment.get('baseUrl')}/api/rooms`,\r",
-											"    header: { 'Authorization': `Bearer ${pm.environment.get('authToken')}` }\r",
-											"  },\r",
-											"  (err, response) => {\r",
-											"    tests[\"Room disappear from list\"] = pm.expect(response.json().items.map(i=>i._id)).to.not.include(thisCase.deleteRoomId);\r",
-											"  });\r",
-											"  break;\r",
-											"\r",
-											"default:\r",
-											"}\r",
-											"\r",
-											"if (!thisCase.end) {\r",
-											"  pm.environment.set('caseId', caseId+1)\r",
-											"  postman.setNextRequest('rooms/remove-member');  \r",
-											"}\r",
-											"else {\r",
-											"  pm.environment.set('caseId', 0);\r",
-											"  postman.setNextRequest(null);\r",
-											"}"
-										],
-										"type": "text/javascript"
-									}
-								}
-							],
-							"request": {
-								"method": "POST",
-								"header": [],
-								"url": {
-									"raw": "{{baseUrl}}/api/rooms/:id/remove-member",
-									"host": [
-										"{{baseUrl}}"
-									],
-									"path": [
-										"api",
-										"rooms",
-										":id",
-										"remove-member"
-									],
-									"variable": [
-										{
-											"key": "id",
-											"value": "{{deleteRoomId}}",
-											"description": "(Required) "
-										}
-									]
-								}
-							},
-							"response": []
 						}
 					],
 					"auth": {
@@ -1815,8 +1959,7 @@
 											"}\r",
 											"\r",
 											"pm.environment.set('thisCase', JSON.stringify(thisCase));\r",
-											"pm.environment.set('queries', Object.keys(thisCase.body).map(key => `${key}=${thisCase.body[key]}`).join('&'));\r",
-											""
+											"pm.environment.set('body', JSON.stringify(thisCase.body));"
 										],
 										"type": "text/javascript"
 									}
